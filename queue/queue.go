@@ -1,10 +1,14 @@
 package natshelpers
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"time"
 
@@ -39,9 +43,21 @@ func WithReply(reply string) PushOptions {
 	}
 }
 
-func New(conn *nats.Conn, subjects []string, name string) (*Queue, error) {
+func New(conn *nats.Conn, subjects []string) (*Queue, error) {
+	sort.Slice(subjects, func(i, j int) bool {
+		return i > j
+	})
+	buffer := bytes.NewBufferString("")
+	for _, subject := range subjects {
+		buffer.WriteString(subject)
+		buffer.WriteString(";")
+	}
+	sha256 := sha256.New()
+	sha256.Write(buffer.Bytes())
+	hash := sha256.Sum(nil)
+	hex := hex.EncodeToString(hash)
 	return NewCustom(conn, &nats.StreamConfig{
-		Name:     name,
+		Name:     hex,
 		Subjects: subjects,
 	})
 }
@@ -94,18 +110,18 @@ func (client *Queue) Pull(subject string, cb func(*nats.Msg) error, opts ...nats
 	if err != nil {
 		return nil, err
 	}
-	cancelFunc := pullHandler(c, cb)
+	cancelFunc := pullHandler(c, cb, subject)
 	return cancelFunc, nil
 }
 
-func pullHandler(client *nats.Subscription, cb func(*nats.Msg) error) func() error {
+func pullHandler(client *nats.Subscription, cb func(*nats.Msg) error, subject string) func() error {
 	ctx, cancel := context.WithCancel(context.TODO())
 	listening := true
 	go func() {
 		for listening {
 			batch, err := client.Fetch(10, nats.Context(ctx))
 			if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-				log.Println(err)
+				log.Println(err, subject)
 			}
 			for _, msg := range batch {
 				go msgHandler(msg, cb)
