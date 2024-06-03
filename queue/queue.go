@@ -15,6 +15,7 @@ import (
 type (
 	DelayHandlerState int
 	Queue             struct {
+		conn *nats.Conn
 		js   nats.JetStreamContext
 		name string
 	}
@@ -58,9 +59,14 @@ func NewCustom(conn *nats.Conn, conf *nats.StreamConfig) (*Queue, error) {
 		return nil, err
 	}
 	client := Queue{}
+	client.conn = conn
 	client.js = js
 	client.name = conf.Name
 	return &client, nil
+}
+
+func (client *Queue) Conn() *nats.Conn {
+	return client.conn
 }
 
 func (client *Queue) Push(subject string, data []byte, opts ...PushOptions) error {
@@ -72,6 +78,14 @@ func (client *Queue) Push(subject string, data []byte, opts ...PushOptions) erro
 		option(&msg)
 	}
 	_, err := client.js.PublishMsg(&msg)
+	return err
+}
+
+func (client *Queue) PushMsg(msg *nats.Msg, opts ...PushOptions) error {
+	for _, option := range opts {
+		option(msg)
+	}
+	_, err := client.js.PublishMsg(msg)
 	return err
 }
 
