@@ -9,11 +9,12 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	natshelpers "github.com/vedadiyan/nats-helpers"
 )
 
 type (
 	DelayHandlerState int
-	Client            struct {
+	Queue             struct {
 		js   nats.JetStreamContext
 		name string
 	}
@@ -37,14 +38,14 @@ func WithReply(reply string) PushOptions {
 	}
 }
 
-func New(conn *nats.Conn, subjects []string, name string) (*Client, error) {
+func New(conn *nats.Conn, subjects []string, name string) (*Queue, error) {
 	return NewCustom(conn, &nats.StreamConfig{
 		Name:     name,
 		Subjects: subjects,
 	})
 }
 
-func NewCustom(conn *nats.Conn, conf *nats.StreamConfig) (*Client, error) {
+func NewCustom(conn *nats.Conn, conf *nats.StreamConfig) (*Queue, error) {
 	js, err := conn.JetStream()
 	if err != nil {
 		return nil, err
@@ -56,13 +57,13 @@ func NewCustom(conn *nats.Conn, conf *nats.StreamConfig) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := Client{}
+	client := Queue{}
 	client.js = js
 	client.name = conf.Name
 	return &client, nil
 }
 
-func (client *Client) Push(subject string, data []byte, opts ...PushOptions) error {
+func (client *Queue) Push(subject string, data []byte, opts ...PushOptions) error {
 	msg := nats.Msg{}
 	msg.Header = nats.Header{}
 	msg.Subject = subject
@@ -74,7 +75,7 @@ func (client *Client) Push(subject string, data []byte, opts ...PushOptions) err
 	return err
 }
 
-func (client *Client) Pull(subject string, cb func(*nats.Msg) error, opts ...nats.SubOpt) (func() error, error) {
+func (client *Queue) Pull(subject string, cb func(*nats.Msg) error, opts ...nats.SubOpt) (func() error, error) {
 	c, err := client.js.PullSubscribe(subject, client.name, opts...)
 	if err != nil {
 		return nil, err
@@ -114,7 +115,7 @@ func msgHandler(msg *nats.Msg, cb func(*nats.Msg) error) {
 	if state == BREAK {
 		return
 	}
-	ack := ConditionalAck(msg, 10)
+	ack := natshelpers.ConditionalAck(msg, 10)
 	err = cb(msg)
 	if err != nil {
 		msg.Term()
