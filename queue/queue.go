@@ -33,13 +33,13 @@ const (
 
 func WithDelay(seconds int) PushOptions {
 	return func(m *nats.Msg) {
-		m.Header.Add(natshelpers.HEADER_DELAY_UNTIL, fmt.Sprintf("%d", time.Now().Add(time.Second*time.Duration(seconds)).UnixMicro()))
+		m.Header.Set(natshelpers.HEADER_DELAY_UNTIL, fmt.Sprintf("%d", time.Now().Add(time.Second*time.Duration(seconds)).UnixMicro()))
 	}
 }
 
 func WithReply(reply string) PushOptions {
 	return func(m *nats.Msg) {
-		m.Reply = reply
+		m.Header.Set(natshelpers.HEADER_REPLY, reply)
 	}
 }
 
