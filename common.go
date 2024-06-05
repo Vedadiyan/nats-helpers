@@ -11,6 +11,13 @@ type (
 	State func(msg *nats.Msg)
 )
 
+const (
+	HEADER_DELAY_UNTIL = "Delay-Until"
+	HEADER_REPLY       = "Reply"
+	HEADER_REFLECTOR   = "Reflector"
+	HEADER_STATUS      = "Status"
+)
+
 func Monitor(msg *nats.Msg, delay nats.AckWait) func(State) {
 	msg.InProgress(delay)
 	ctx, cancel := context.WithCancel(context.TODO())

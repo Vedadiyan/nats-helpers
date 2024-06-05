@@ -33,7 +33,7 @@ const (
 
 func WithDelay(seconds int) PushOptions {
 	return func(m *nats.Msg) {
-		m.Header.Add("delay-until", fmt.Sprintf("%d", time.Now().Add(time.Second*time.Duration(seconds)).UnixMicro()))
+		m.Header.Add(natshelpers.HEADER_DELAY_UNTIL, fmt.Sprintf("%d", time.Now().Add(time.Second*time.Duration(seconds)).UnixMicro()))
 	}
 }
 
@@ -149,7 +149,7 @@ func msgHandler(msg *nats.Msg, cb func(*nats.Msg) natshelpers.State) {
 }
 
 func delayHandler(msg *nats.Msg) (DelayHandlerState, error) {
-	delayUntilStr := msg.Header.Get("delay-until")
+	delayUntilStr := msg.Header.Get(natshelpers.HEADER_DELAY_UNTIL)
 	if len(delayUntilStr) > 0 {
 		unixMicro, err := strconv.ParseInt(delayUntilStr, 10, 64)
 		if err != nil {
