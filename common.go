@@ -35,7 +35,7 @@ func Monitor(msg *nats.Msg, delay nats.AckWait) func(State) {
 	}
 }
 
-func Ack() State {
+func Done() State {
 	return func(msg *nats.Msg) {
 		msg.Ack()
 	}
@@ -47,7 +47,7 @@ func Repeat(delay time.Duration) State {
 	}
 }
 
-func Term() State {
+func Drop() State {
 	return func(msg *nats.Msg) {
 		msg.Term()
 	}
