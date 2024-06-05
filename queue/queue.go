@@ -43,6 +43,12 @@ func WithReply(reply string) PushOptions {
 	}
 }
 
+func WithStatus(status string) PushOptions {
+	return func(m *nats.Msg) {
+		m.Header.Set(natshelpers.HEADER_STATUS, status)
+	}
+}
+
 func New(conn *nats.Conn, subjects []string) (*Queue, error) {
 	sort.Slice(subjects, func(i, j int) bool {
 		return i > j
