@@ -15,7 +15,7 @@ const (
 	HEADER_DELAY_UNTIL = "Delay-Until"
 	HEADER_REPLY       = "Reply"
 	HEADER_REFLECTOR   = "Reflector"
-	HEADER_STATUS      = "Status"
+	HEADER_STATUS      = "X-Status"
 )
 
 func Monitor(msg *nats.Msg, delay nats.AckWait) func(State) {
