@@ -126,8 +126,9 @@ func pullHandler(client *nats.Subscription, cb func(*nats.Msg) natshelpers.State
 	go func() {
 		for listening {
 			batch, err := client.Fetch(10, nats.Context(ctx))
-			if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			if err != nil && !errors.Is(err, context.DeadlineExceeded) && err.Error() != "nats: " {
 				log.Println(err, subject)
+				continue
 			}
 			for _, msg := range batch {
 				go msgHandler(msg, cb)
