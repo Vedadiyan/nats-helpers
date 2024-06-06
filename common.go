@@ -16,6 +16,8 @@ const (
 	HEADER_REPLY       = "Reply"
 	HEADER_REFLECTOR   = "Reflector"
 	HEADER_STATUS      = "X-Status"
+	HEADER_RETRY       = "X-Retry"
+	HEADER_ATTEMPT     = "X-Attempt"
 )
 
 func Monitor(msg *nats.Msg, delay nats.AckWait) func(State) {
@@ -50,6 +52,21 @@ func Done() State {
 
 func Repeat(delay time.Duration) State {
 	return func(msg *nats.Msg) {
+		msg.NakWithDelay(delay)
+	}
+}
+
+func RepeatMax(delay time.Duration, i uint64, errorCb func(error)) State {
+	return func(msg *nats.Msg) {
+		metadata, err := msg.Metadata()
+		if err != nil {
+			errorCb(err)
+			return
+		}
+		if metadata.NumDelivered >= i {
+			msg.Term()
+			return
+		}
 		msg.NakWithDelay(delay)
 	}
 }
