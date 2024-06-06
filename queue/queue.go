@@ -33,13 +33,19 @@ const (
 
 func WithDelay(seconds int) PushOptions {
 	return func(m *nats.Msg) {
-		m.Header.Add("delay-until", fmt.Sprintf("%d", time.Now().Add(time.Second*time.Duration(seconds)).UnixMicro()))
+		m.Header.Set(natshelpers.HEADER_DELAY_UNTIL, fmt.Sprintf("%d", time.Now().Add(time.Second*time.Duration(seconds)).UnixMicro()))
 	}
 }
 
 func WithReply(reply string) PushOptions {
 	return func(m *nats.Msg) {
-		m.Reply = reply
+		m.Header.Set(natshelpers.HEADER_REPLY, reply)
+	}
+}
+
+func WithStatus(status string) PushOptions {
+	return func(m *nats.Msg) {
+		m.Header.Set(natshelpers.HEADER_STATUS, status)
 	}
 }
 
@@ -105,7 +111,7 @@ func (client *Queue) PushMsg(msg *nats.Msg, opts ...PushOptions) error {
 	return err
 }
 
-func (client *Queue) Pull(subject string, cb func(*nats.Msg) error, opts ...nats.SubOpt) (func() error, error) {
+func (client *Queue) Pull(subject string, cb func(*nats.Msg) natshelpers.State, opts ...nats.SubOpt) (func() error, error) {
 	c, err := client.js.PullSubscribe(subject, client.name, opts...)
 	if err != nil {
 		return nil, err
@@ -114,14 +120,15 @@ func (client *Queue) Pull(subject string, cb func(*nats.Msg) error, opts ...nats
 	return cancelFunc, nil
 }
 
-func pullHandler(client *nats.Subscription, cb func(*nats.Msg) error, subject string) func() error {
+func pullHandler(client *nats.Subscription, cb func(*nats.Msg) natshelpers.State, subject string) func() error {
 	ctx, cancel := context.WithCancel(context.TODO())
 	listening := true
 	go func() {
 		for listening {
 			batch, err := client.Fetch(10, nats.Context(ctx))
-			if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			if err != nil && !errors.Is(err, context.DeadlineExceeded) && err.Error() != "nats: " {
 				log.Println(err, subject)
+				continue
 			}
 			for _, msg := range batch {
 				go msgHandler(msg, cb)
@@ -136,7 +143,7 @@ func pullHandler(client *nats.Subscription, cb func(*nats.Msg) error, subject st
 	return cancelFunc
 }
 
-func msgHandler(msg *nats.Msg, cb func(*nats.Msg) error) {
+func msgHandler(msg *nats.Msg, cb func(*nats.Msg) natshelpers.State) {
 	state, err := delayHandler(msg)
 	if err != nil {
 		_ = msg.Term()
@@ -145,17 +152,11 @@ func msgHandler(msg *nats.Msg, cb func(*nats.Msg) error) {
 	if state == BREAK {
 		return
 	}
-	ack := natshelpers.ConditionalAck(msg, 10)
-	err = cb(msg)
-	if err != nil {
-		msg.Term()
-		return
-	}
-	ack()
+	natshelpers.Monitor(msg, 10)(cb(msg))
 }
 
 func delayHandler(msg *nats.Msg) (DelayHandlerState, error) {
-	delayUntilStr := msg.Header.Get("delay-until")
+	delayUntilStr := msg.Header.Get(natshelpers.HEADER_DELAY_UNTIL)
 	if len(delayUntilStr) > 0 {
 		unixMicro, err := strconv.ParseInt(delayUntilStr, 10, 64)
 		if err != nil {

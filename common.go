@@ -8,10 +8,17 @@ import (
 )
 
 type (
-	Ack func()
+	State func(msg *nats.Msg)
 )
 
-func ConditionalAck(msg *nats.Msg, delay nats.AckWait) Ack {
+const (
+	HEADER_DELAY_UNTIL = "Delay-Until"
+	HEADER_REPLY       = "Reply"
+	HEADER_REFLECTOR   = "Reflector"
+	HEADER_STATUS      = "X-Status"
+)
+
+func Monitor(msg *nats.Msg, delay nats.AckWait) func(State) {
 	msg.InProgress(delay)
 	ctx, cancel := context.WithCancel(context.TODO())
 	go func() {
@@ -20,7 +27,6 @@ func ConditionalAck(msg *nats.Msg, delay nats.AckWait) Ack {
 			select {
 			case <-ctx.Done():
 				{
-					msg.Ack()
 					break LOOP
 				}
 			case <-time.After(time.Second * time.Duration(delay/2)):
@@ -30,5 +36,26 @@ func ConditionalAck(msg *nats.Msg, delay nats.AckWait) Ack {
 			}
 		}
 	}()
-	return Ack(cancel)
+	return func(s State) {
+		cancel()
+		s(msg)
+	}
+}
+
+func Done() State {
+	return func(msg *nats.Msg) {
+		msg.Ack()
+	}
+}
+
+func Repeat(delay time.Duration) State {
+	return func(msg *nats.Msg) {
+		msg.NakWithDelay(delay)
+	}
+}
+
+func Drop() State {
+	return func(msg *nats.Msg) {
+		msg.Term()
+	}
 }
