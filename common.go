@@ -58,6 +58,7 @@ func RepeatMax(delay time.Duration, i uint64, errorCb func(error)) State {
 	return func(msg *nats.Msg) {
 		metadata, err := msg.Metadata()
 		if err != nil {
+			msg.Term()
 			errorCb(err)
 			return
 		}
