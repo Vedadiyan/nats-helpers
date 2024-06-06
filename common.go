@@ -16,8 +16,6 @@ const (
 	HEADER_REPLY       = "Reply"
 	HEADER_REFLECTOR   = "Reflector"
 	HEADER_STATUS      = "X-Status"
-	HEADER_RETRY       = "X-Retry"
-	HEADER_ATTEMPT     = "X-Attempt"
 )
 
 func Monitor(msg *nats.Msg, delay nats.AckWait) func(State) {
