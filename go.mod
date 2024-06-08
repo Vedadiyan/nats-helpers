@@ -1,6 +1,6 @@
 module github.com/vedadiyan/nats-helpers
 
-go 1.21.3
+go 1.20
 
 require github.com/nats-io/nats.go v1.35.0
 
