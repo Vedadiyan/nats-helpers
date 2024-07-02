@@ -21,6 +21,10 @@ func (header Header) SetReflector(str string) {
 	header["Reflector"] = []string{str}
 }
 
+func (header Header) DeleteReflector() {
+	delete(header, "Reflector")
+}
+
 func (header Header) GetReflector() string {
 	val := header["Reflector"]
 	if len(val) == 0 {
@@ -31,6 +35,10 @@ func (header Header) GetReflector() string {
 
 func (header Header) SetStatus(statusCode int) {
 	header["Status"] = []string{fmt.Sprintf("%d", statusCode)}
+}
+
+func (header Header) DeleteStatus() {
+	delete(header, "Status")
 }
 
 func (header Header) GetStatus() string {
@@ -45,6 +53,10 @@ func (header Header) SetReply(str string) {
 	header["Reply"] = []string{str}
 }
 
+func (header Header) DeleteReply() {
+	delete(header, "Reply")
+}
+
 func (header Header) GetReply() string {
 	val := header["Reply"]
 	if len(val) == 0 {
@@ -55,6 +67,27 @@ func (header Header) GetReply() string {
 
 func (header Header) Set(key string, value string) {
 	header[key] = []string{value}
+}
+
+func (header Header) Add(key string, value string) {
+	val, ok := header[key]
+	if !ok {
+		val = make([]string, 0)
+	}
+	val = append(val, value)
+	header[key] = val
+}
+
+func (header Header) Delete(key string) {
+	delete(header, key)
+}
+
+func (header Header) Get(key string) []string {
+	val, ok := header[key]
+	if !ok || len(val) == 0 {
+		return nil
+	}
+	return val
 }
 
 func (header Header) Export(natsHeader nats.Header) error {
