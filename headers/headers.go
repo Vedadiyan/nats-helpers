@@ -30,7 +30,7 @@ func (header Header) GetReflector() string {
 	if len(val) == 0 {
 		return ""
 	}
-	return val[1]
+	return val[0]
 }
 
 func (header Header) SetStatus(statusCode int) {
@@ -46,7 +46,7 @@ func (header Header) GetStatus() string {
 	if len(val) == 0 {
 		return ""
 	}
-	return val[1]
+	return val[0]
 }
 
 func (header Header) SetReply(str string) {
@@ -62,7 +62,7 @@ func (header Header) GetReply() string {
 	if len(val) == 0 {
 		return ""
 	}
-	return val[1]
+	return val[0]
 }
 
 func (header Header) Set(key string, value string) {
